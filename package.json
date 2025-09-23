@@ -1,0 +1,32 @@
+{
+  "name": "ec_api",
+  "version": "1.0.0",
+  "main": "src/compiled/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon  ./src/compiled/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChrisCarcamo1605/EstacionCaf-.git"
+  },
+  "author": "Christian",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ChrisCarcamo1605/EstacionCaf-/issues"
+  },
+  "homepage": "https://github.com/ChrisCarcamo1605/EstacionCaf-#readme",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "pg": "^8.16.3",
+    "typeorm": "^0.3.27"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/reflect-metadata": "^0.0.5",
+    "nodemon": "^3.1.10"
+  }
+}

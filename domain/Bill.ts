@@ -1,15 +1,17 @@
-export class Bill{
-    billId:bigint;
-    cashRegister: bigint;
-    customer:string;
-    date:Date;
-    total: number;
+import {Entity,PrimaryGeneratedColumn,Column} from "typeorm";
 
-    constructor(billId:bigint, cashRegister:bigint, customer:string, date:Date, total:number){
-        this.billId = billId;
-        this.cashRegister = cashRegister;
-        this.customer = customer;
-        this.date =  date;
-        this.total = total;
-    }
+@Entity()
+export class Bill{
+    @PrimaryGeneratedColumn()
+    billId:number = 1;
+
+    @Column()
+    cashRegister: number= 1;
+    @Column()
+    customer:string ="";
+    @Column()
+    date:Date = new Date;
+    @Column()
+    total: number= 0;
+
 }
