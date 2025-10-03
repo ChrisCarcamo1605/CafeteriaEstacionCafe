@@ -1,56 +1,56 @@
-import { Bill } from "../domain/Bill";
-import { BillRepository } from "../infrastructure/repositories/BillRepository";
+import { Bill } from "../domain/entities/Bill";
+import { IService } from "../domain/interfaces/IService";
+import { billSchema } from "../application/validations/BillValidations";
+import { SaveBillDTO, BillItemDTO } from "../application/DTOs/BillsDTO";
 
-const repo = new BillRepository();
+let service:IService;
+export const setService = (billService:IService)=>{
+  service = billService;
+}
 
-const list = async (req: any, res: any) => {
+export const getBills = async (req: any, res: any) => {
   try {
-    
-    const data = await repo.getData();
-    console.log(`corriendo metodo list del controller`);
-    
+    const data = await service.getAll();
+
     return res.status(200).send({ body: data });
-  } catch (error) {
-    return res.status(500).send({ 
-      status: "error", 
-      message: "Error al obtener las facturas" 
-    });
-  }
-};
-
-const saveBill = async (req: any, res: any) => {
-  try {
-    const body = req.body;
-    console.log(`entramos viejo, aquí está el body: `, body);
-
-    if (!body) {
-      console.log("Hubo un error en el save de bill washo");
-      return res.status(400).send({
-        status: "error",
-        message: "Faltan datos krnal",
-      });
-    }
-
-    const bill = new Bill();
-    bill.billId = body.billId;
-    bill.cashRegister = body.cashRegister;
-    bill.customer = body.customer;
-    bill.date = body.date;
-    bill.total = body.total;
-
-    // Usar el método del repositorio
-    await repo.save(bill);
-
-    return res.status(201).send({
-      message: "Datos enviados correctamente",
-      req: body,
-    });
   } catch (error) {
     return res.status(500).send({
       status: "error",
-      message: "Error al guardar la factura"
+      message: `Error al conseguir las facturas ${error}`,
     });
   }
 };
 
-module.exports = { list, saveBill };
+export const saveBill = async (req: any, res: any) => {
+  try {
+    const billData: SaveBillDTO = req.body;
+    const validatedData = billSchema.parse(billData);
+    console.log(`Datos validados correctamente:`, validatedData);
+
+    await service.save(validatedData);
+
+    return res.status(201).send({
+      message: "Factura creada correctamente",
+      data: {
+       validatedData
+      },
+    });
+  } catch (error: any) {
+
+    if (error.name === 'ZodError') {
+      return res.status(400).send({
+        status: "error",
+        message: "Datos inválidos",
+        errors: error.issues || error.errors
+      });
+    }
+
+    console.error('Error al guardar factura:', error);
+    return res.status(500).send({
+      status: "error", 
+      message: `Error interno del servidor: ${error.message}`,
+    });
+  }
+};
+
+// Las funciones ya están exportadas individualmente arriba

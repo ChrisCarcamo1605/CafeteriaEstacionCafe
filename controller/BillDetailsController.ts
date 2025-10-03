@@ -1,0 +1,57 @@
+import { ca } from "zod/v4/locales";
+import { BillDetailsSchema } from "../application/validations/BillDetailsValidations";
+import { IService } from "../domain/interfaces/IService";
+
+let service: IService;
+export const setService = (detailsService: IService) => {
+  service = detailsService;
+};
+
+export const saveDetails =async (req: any, res: any) => {
+  try {
+    const data = req.body;
+   await  service.saveAll(data);
+
+    return res.status(201).send({
+      status: "success",
+      message: "El detalle fue agregado correctamente",
+      data: data
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).send({
+        status: "error",
+        message: "Datos inválidos",
+        errors: error.issues || error.errors,
+      });
+    }
+
+    console.log(error.message);
+    return res.status(500).send({
+      status: "error",
+      message: "Hubo en error en el servidor al guardar el detalle",
+      errors: error
+    });
+  }
+};
+
+export const getDetails = async (req:any,res:any)=>{
+  try{
+    const data = await service.getAll();
+    console.log(data);
+    
+    return res.status(200).send({
+      status: "success",
+      message: "Detalles obtenidos corretamente",
+      data: data
+    })
+
+  }catch(error:any){
+    console.log(error);
+    return res.status(500).send({
+      status:"error",
+      message: "Hubo un error en el servidor",
+      errors: error.error
+    })
+  }
+}

@@ -22,9 +22,11 @@
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "pg": "^8.16.3",
-    "typeorm": "^0.3.27"
+    "typeorm": "^0.3.27",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
     "@types/reflect-metadata": "^0.0.5",
     "nodemon": "^3.1.10"

@@ -1,13 +1,7 @@
-const {Router} = require('express');
-const router = Router();
+import { Router } from 'express';
+import {getBills,saveBill} from '../../controller/BillController';
 
-const controller = require('../../controller/BillController')
-
-
-router.get('/bills',controller.list);
-router.post('/bills',controller.saveBill);
-
-
-
-
-module.exports= router;
+export const billRouter = Router();
+ 
+billRouter.get('/bills', getBills);
+billRouter.post('/bills', saveBill);

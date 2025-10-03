@@ -1,17 +1,13 @@
 //Cargamos dependencias
 const express = require("express");
 const cors = require("cors");
-const routes = require("./infrastructure/routes");
-const connection = require('./infrastructure/db/Connection')
-
-//Conexion a base de datos
-connection.InizializeDataSource();
-
+const routes = require("./infrastructure/Routes/routes").default;
+  
 //Creamos el servidor
 const app = express();
 const port = 3484;
 
-//Configuramos CORS y 
+//Configuramos CORS
 app.use(cors());
 
 //Covertimos datos del body a objetos
@@ -22,7 +18,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', routes);
 
 
+//Inyectamos dependencias
+const {initializeDependencies} = require('./application/dependencyInjection');
+initializeDependencies();
+
+
 //Poner a escuchar el servidor (que se mantenga activo y no cierre la app)
 app.listen(port, () => {
-  console.log("corriendo api");
+  console.log("Corriendo API...");
 });

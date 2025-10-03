@@ -9,51 +9,53 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const Bill_1 = require("../domain/Bill");
-const BillRepository_1 = require("../infrastructure/repositories/BillRepository");
-const repo = new BillRepository_1.BillRepository();
-const list = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.saveBill = exports.getBills = exports.setService = void 0;
+const BillValidations_1 = require("../application/validations/BillValidations");
+let service;
+const setService = (billService) => {
+    service = billService;
+};
+exports.setService = setService;
+const getBills = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const data = yield repo.getData();
-        console.log(`corriendo metodo list del controller`);
+        const data = yield service.getAll();
         return res.status(200).send({ body: data });
     }
     catch (error) {
         return res.status(500).send({
             status: "error",
-            message: "Error al obtener las facturas"
+            message: `Error al conseguir las facturas ${error}`,
         });
     }
 });
+exports.getBills = getBills;
 const saveBill = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const body = req.body;
-        console.log(`entramos viejo, aquí está el body: `, body);
-        if (!body) {
-            console.log("Hubo un error en el save de bill washo");
-            return res.status(400).send({
-                status: "error",
-                message: "Faltan datos krnal",
-            });
-        }
-        const bill = new Bill_1.Bill();
-        bill.billId = body.billId;
-        bill.cashRegister = body.cashRegister;
-        bill.customer = body.customer;
-        bill.date = body.date;
-        bill.total = body.total;
-        // Usar el método del repositorio
-        yield repo.save(bill);
+        const billData = req.body;
+        const validatedData = BillValidations_1.billSchema.parse(billData);
+        console.log(`Datos validados correctamente:`, validatedData);
+        yield service.save(validatedData);
         return res.status(201).send({
-            message: "Datos enviados correctamente",
-            req: body,
+            message: "Factura creada correctamente",
+            data: {
+                validatedData
+            },
         });
     }
     catch (error) {
+        if (error.name === 'ZodError') {
+            return res.status(400).send({
+                status: "error",
+                message: "Datos inválidos",
+                errors: error.issues || error.errors
+            });
+        }
+        console.error('Error al guardar factura:', error);
         return res.status(500).send({
             status: "error",
-            message: "Error al guardar la factura"
+            message: `Error interno del servidor: ${error.message}`,
         });
     }
 });
-module.exports = { list, saveBill };
+exports.saveBill = saveBill;
+// Las funciones ya están exportadas individualmente arriba
