@@ -13,6 +13,7 @@ import { BillDetails } from "../domain/entities/BillDetails";
 export const initializeDependencies = () => {
   const AppDataSource = getDataSource();
   AppDataSource.initialize();
+  console.log(`Conexion exitosa a la base de datos`);
 
   //Repositories
   const billRepository = AppDataSource.getRepository(Bill);

@@ -11,7 +11,7 @@ const getDataSource = () => {
         host: "localhost",
         port: 5555,
         username: "admin",
-        password: "Carcamito*-*2024",
+        password: "estacionPass2025",
         database: "estacioncafedb",
         synchronize: true,
         logging: false,

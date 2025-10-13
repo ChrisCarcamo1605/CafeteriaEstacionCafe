@@ -14,6 +14,7 @@ const BillDetails_1 = require("../domain/entities/BillDetails");
 const initializeDependencies = () => {
     const AppDataSource = (0, Connection_1.getDataSource)();
     AppDataSource.initialize();
+    console.log(`Conexion exitosa a la base de datos`);
     //Repositories
     const billRepository = AppDataSource.getRepository(Bill_1.Bill);
     const productRepository = AppDataSource.getRepository(Producto_1.Product);
