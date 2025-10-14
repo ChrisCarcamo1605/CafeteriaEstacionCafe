@@ -53,6 +53,15 @@ export const getProducts = async (req: any, res: any) => {
       data: productDTOs,
     });
   } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).send({
+        status: "error",
+        message: "Datos inválidos: " + error.issues[0].message,
+        campo: error.issues[0].path,
+        error: error.issues[0].code,
+      });
+    }
+
     return res.status(500).send({
       status: "error",
       message: "Error al obtener los productos",

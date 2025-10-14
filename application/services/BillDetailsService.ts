@@ -35,7 +35,8 @@ export class BillDetailsService implements IService {
   }
   getAll(): Promise<any[]> {
     return this.repository.find({
-      relations: ["product"],
+      relations: ["product","bill"],
+
     });
   }
 }

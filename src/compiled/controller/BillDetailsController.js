@@ -22,7 +22,7 @@ const saveDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         return res.status(201).send({
             status: "success",
             message: "El detalle fue agregado correctamente",
-            data: data
+            data: data,
         });
     }
     catch (error) {
@@ -37,7 +37,7 @@ const saveDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         return res.status(500).send({
             status: "error",
             message: "Hubo en error en el servidor al guardar el detalle",
-            errors: error
+            errors: error,
         });
     }
 });
@@ -49,15 +49,23 @@ const getDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         return res.status(200).send({
             status: "success",
             message: "Detalles obtenidos corretamente",
-            data: data
+            data: data,
         });
     }
     catch (error) {
         console.log(error);
+        if (error.name === "ZodError") {
+            return res.status(400).send({
+                status: "error",
+                message: "Datos inválidos: " + error.issues[0].message,
+                campo: error.issues[0].path,
+                error: error.issues[0].code,
+            });
+        }
         return res.status(500).send({
             status: "error",
             message: "Hubo un error en el servidor",
-            errors: error.error
+            errors: error.error,
         });
     }
 });

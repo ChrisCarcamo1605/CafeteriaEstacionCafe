@@ -43,11 +43,12 @@ const saveBill = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (error) {
-        if (error.name === 'ZodError') {
+        if (error.name === "ZodError") {
             return res.status(400).send({
                 status: "error",
-                message: "Datos inválidos",
-                errors: error.issues || error.errors
+                message: "Datos inválidos: " + error.issues[0].message,
+                campo: error.issues[0].path,
+                error: error.issues[0].code,
             });
         }
         console.error('Error al guardar factura:', error);

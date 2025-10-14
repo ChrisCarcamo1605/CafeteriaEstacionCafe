@@ -32,7 +32,7 @@ class BillDetailsService {
     }
     getAll() {
         return this.repository.find({
-            relations: ["product"],
+            relations: ["product", "bill"],
         });
     }
 }
