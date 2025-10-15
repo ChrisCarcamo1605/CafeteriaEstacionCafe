@@ -57,9 +57,10 @@ class UserService {
             const userData = body;
             const user = new User_1.User();
             user.username = userData.username;
-            user.password = userData.password;
-            user.userTypeId = userData.userTypeId;
+            user.password = yield this.encryptPassword(userData.password);
+            user.userTypeId = userData.typeId;
             user.email = userData.email;
+            console.log("Guardando usuario...");
             return yield this.userRepository.save(user);
         });
     }

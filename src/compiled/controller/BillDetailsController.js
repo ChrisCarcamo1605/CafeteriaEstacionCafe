@@ -18,19 +18,21 @@ exports.setService = setService;
 const saveDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = req.body;
-        yield service.saveAll(data);
+        const result = yield service.saveAll(data);
+        console.log("Factura y detalles guardados correctamente");
         return res.status(201).send({
             status: "success",
-            message: "El detalle fue agregado correctamente",
-            data: data,
+            message: "Factura y detalles guardados correctamente",
+            data: result,
         });
     }
     catch (error) {
         if (error.name === "ZodError") {
             return res.status(400).send({
                 status: "error",
-                message: "Datos inválidos",
-                errors: error.issues || error.errors,
+                message: "Datos inválidos: " + error.issues[0].message,
+                campo: error.issues[0].path,
+                error: error.issues[0].code,
             });
         }
         console.log(error.message);
@@ -45,7 +47,7 @@ exports.saveDetails = saveDetails;
 const getDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield service.getAll();
-        console.log(data);
+        console.log("Detalles obtenidos corretamente");
         return res.status(200).send({
             status: "success",
             message: "Detalles obtenidos corretamente",

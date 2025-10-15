@@ -20,11 +20,12 @@ const saveUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = req.body;
         const dataValidated = UserValidations_1.userSchema.parse(data);
-        yield service.save(dataValidated);
+        const result = yield service.save(dataValidated);
+        console.log("Usuario guardado correctamente");
         return res.status(201).send({
             status: "sucess",
             message: "El usuario fue registrado correctamente",
-            data: dataValidated
+            data: result,
         });
     }
     catch (error) {
@@ -36,6 +37,7 @@ const saveUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 error: error.issues[0].code,
             });
         }
+        console.log(error);
         res.status(500).send({
             status: "error",
             message: "Hubo un error: " + error.message,
@@ -47,6 +49,7 @@ exports.saveUser = saveUser;
 const getUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield service.getAll();
+        console.log("Usuarios obtenidos correctamente");
         return res.status(200).send({
             status: "sucess",
             message: "Usuarios obtenidos correctamente",

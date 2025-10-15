@@ -33,7 +33,7 @@ const initializeDependencies = () => {
     //Services
     const billService = new BillService_1.BillService(billRepository);
     const productService = new ProductService_1.ProductService(productRepository);
-    const billDetailsService = new BillDetailsService_1.BillDetailsService(billDetailsRepository);
+    const billDetailsService = new BillDetailsService_1.BillDetailsService(billDetailsRepository, billService);
     const userService = new UserService_1.UserService(userRepositoy);
     const userTypeService = new UserTypeService_1.UserTypeService(userTypeRepository);
     (0, BillController_1.setService)(billService);

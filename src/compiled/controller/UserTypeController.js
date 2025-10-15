@@ -18,19 +18,21 @@ const saveType = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = req.body;
         const dataValidated = UserTypeValidations_1.UserTypeSchema.parse(data);
-        yield service.save(dataValidated);
+        const result = yield service.save(dataValidated);
+        console.log("Tipo de usuario guardado correctamente");
         return res.status(201).send({
             status: "sucess",
             message: "El tipo de usuario fue registrado correctamente",
-            data: dataValidated
+            data: result,
         });
     }
     catch (error) {
         if (error.name === "ZodError") {
             return res.status(400).send({
                 status: "error",
-                message: "Datos inválidos",
-                errors: error.issues || error.errors,
+                message: "Datos inválidos: " + error.issues[0].message,
+                campo: error.issues[0].path,
+                error: error.issues[0].code,
             });
         }
         return res.status(500).send({
@@ -44,10 +46,11 @@ exports.saveType = saveType;
 const getTypes = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield service.getAll();
+        console.log("Tipos de usuarios obtenidos exitosamente");
         return res.status(200).send({
             status: "sucess",
             message: "Tipos de usuarios obtenidos exitosamente",
-            data: data
+            data: data,
         });
     }
     catch (error) {

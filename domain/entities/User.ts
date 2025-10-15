@@ -2,6 +2,7 @@ import {
   Column,
   Entity,
   JoinColumn,
+  ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
@@ -28,7 +29,7 @@ export class User {
   @Column()
   active: boolean = true;
 
-  @OneToOne(() => UserType, (type) => type.userTypeId)
+  @ManyToOne(() => UserType, (type) => type.userTypeId)
   @JoinColumn({ name: "type_id" })
   userType?: UserType;
   constructor() {}

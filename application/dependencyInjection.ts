@@ -38,7 +38,8 @@ export const initializeDependencies = () => {
   const billService: IService = new BillService(billRepository);
   const productService: IService = new ProductService(productRepository);
   const billDetailsService: IService = new BillDetailsService(
-    billDetailsRepository
+    billDetailsRepository,
+    billService
   );
   const userService: IService = new UserService(userRepositoy);
   const userTypeService: IService = new UserTypeService(userTypeRepository);

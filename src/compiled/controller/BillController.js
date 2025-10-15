@@ -19,6 +19,7 @@ exports.setService = setService;
 const getBills = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield service.getAll();
+        console.log("Facturas obtenidas correctamente");
         return res.status(200).send({ body: data });
     }
     catch (error) {
@@ -32,14 +33,11 @@ exports.getBills = getBills;
 const saveBill = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const billData = req.body;
-        const validatedData = BillValidations_1.billSchema.parse(billData);
-        console.log(`Datos validados correctamente:`, validatedData);
-        yield service.save(validatedData);
+        const result = yield service.save(BillValidations_1.billSchema.parse(billData));
+        console.log("Factura creada correctamente");
         return res.status(201).send({
             message: "Factura creada correctamente",
-            data: {
-                validatedData
-            },
+            data: result,
         });
     }
     catch (error) {
@@ -51,7 +49,7 @@ const saveBill = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 error: error.issues[0].code,
             });
         }
-        console.error('Error al guardar factura:', error);
+        console.error("Error al guardar factura:", error);
         return res.status(500).send({
             status: "error",
             message: `Error interno del servidor: ${error.message}`,

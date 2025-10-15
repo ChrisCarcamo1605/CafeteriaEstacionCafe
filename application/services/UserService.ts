@@ -15,14 +15,15 @@ export class UserService implements IService {
     throw new Error("Method not implemented.");
   }
 
-  async save(body: any): Promise<any> {
-    const userData:SaveUserDTO = body;
+  async save(body: SaveUserDTO): Promise<any> {
+    const userData: SaveUserDTO = body;
     const user: User = new User();
     user.username = userData.username;
-    user.password = userData.password;
-    user.userTypeId = userData.userTypeId;
+    user.password = await this.encryptPassword(userData.password);
+    user.userTypeId = userData.typeId;
     user.email = userData.email;
 
+    console.log("Guardando usuario...");
     return await this.userRepository.save(user);
   }
 
@@ -34,13 +35,11 @@ export class UserService implements IService {
   }
   getAll(): Promise<any[]> {
     console.log(`Obteniendo usuarios...`);
-    return this.userRepository.find({relations:["userType"]});
+    return this.userRepository.find({ relations: ["userType"] });
   }
 
-  
   private async encryptPassword(password: string): Promise<string> {
     const saltRounds = 10;
     return await bcrypt.hash(password, saltRounds);
   }
 }
-

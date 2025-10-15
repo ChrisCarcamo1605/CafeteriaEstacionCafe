@@ -25,8 +25,8 @@ export class BillDetails {
   @JoinColumn({ name: "product_id" })
   product?: Product;
 
-  @ManyToOne(() => Bill, (product) => product.billId)
-  @JoinColumn({name:"bill_Id"})
+  @ManyToOne(() => Bill, (bill:Bill) => bill.billDetails)
+  @JoinColumn({name:"bill_id"})
   bill?: Bill;
 
   constructor() {}

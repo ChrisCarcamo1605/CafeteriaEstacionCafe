@@ -10,6 +10,7 @@ class UserTypeService {
         const type = new UserType_1.UserType();
         type.name = body.name;
         type.permissionLevel = body.permissionLevel;
+        console.log("Guardando tipo de usuario...");
         return this.typeRepo.save(type);
     }
     saveAll(body) {
@@ -22,6 +23,7 @@ class UserTypeService {
         throw new Error("Method not implemented.");
     }
     getAll() {
+        console.log(`Obteniendo tipos de usuarios...`);
         return this.typeRepo.find();
     }
 }

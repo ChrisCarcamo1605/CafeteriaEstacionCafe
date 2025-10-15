@@ -48,7 +48,7 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "active", void 0);
 __decorate([
-    (0, typeorm_1.OneToOne)(() => UserType_1.UserType, (type) => type.userTypeId),
+    (0, typeorm_1.ManyToOne)(() => UserType_1.UserType, (type) => type.userTypeId),
     (0, typeorm_1.JoinColumn)({ name: "type_id" }),
     __metadata("design:type", UserType_1.UserType)
 ], User.prototype, "userType", void 0);

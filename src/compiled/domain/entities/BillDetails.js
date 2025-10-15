@@ -49,8 +49,8 @@ __decorate([
     __metadata("design:type", Producto_1.Product)
 ], BillDetails.prototype, "product", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Bill_1.Bill, (product) => product.billId),
-    (0, typeorm_1.JoinColumn)({ name: "bill_Id" }),
+    (0, typeorm_1.ManyToOne)(() => Bill_1.Bill, (bill) => bill.billDetails),
+    (0, typeorm_1.JoinColumn)({ name: "bill_id" }),
     __metadata("design:type", Bill_1.Bill)
 ], BillDetails.prototype, "bill", void 0);
 exports.BillDetails = BillDetails = __decorate([

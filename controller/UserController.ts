@@ -11,12 +11,13 @@ export const saveUser = async (req: any, res: any) => {
   try {
     const data = req.body;
     const dataValidated = userSchema.parse(data);
-    await service.save(dataValidated);
+    const result = await service.save(dataValidated);
+    console.log("Usuario guardado correctamente");
 
     return res.status(201).send({
       status: "sucess",
       message: "El usuario fue registrado correctamente",
-      data: dataValidated
+      data: result,
     });
   } catch (error: any) {
     if (error.name === "ZodError") {
@@ -25,13 +26,13 @@ export const saveUser = async (req: any, res: any) => {
         message: "Datos inválidos: " + error.issues[0].message,
         campo: error.issues[0].path,
         error: error.issues[0].code,
-        
       });
     }
 
+    console.log(error);
     res.status(500).send({
       status: "error",
-      message: "Hubo un error: "+error.message,
+      message: "Hubo un error: " + error.message,
       errors: error.errors || error.issues,
     });
   }
@@ -40,6 +41,7 @@ export const saveUser = async (req: any, res: any) => {
 export const getUsers = async (req: any, res: any) => {
   try {
     const data = await service.getAll();
+    console.log("Usuarios obtenidos correctamente");
 
     return res.status(200).send({
       status: "sucess",

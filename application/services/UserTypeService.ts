@@ -12,8 +12,8 @@ export class UserTypeService implements IService {
     const type = new UserType();
     type.name = body.name;
     type.permissionLevel = body.permissionLevel;
+    console.log("Guardando tipo de usuario...");
     return this.typeRepo.save(type);
-
   }
   saveAll(body: any[]): Promise<any[]> {
     throw new Error("Method not implemented.");
@@ -25,6 +25,7 @@ export class UserTypeService implements IService {
     throw new Error("Method not implemented.");
   }
   getAll(): Promise<any[]> {
-   return this.typeRepo.find();
+    console.log(`Obteniendo tipos de usuarios...`);
+    return this.typeRepo.find();
   }
 }
