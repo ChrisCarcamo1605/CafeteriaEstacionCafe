@@ -1,7 +1,7 @@
 import express from 'express';
 import {billRouter} from './BillRoute';
 import {productRouter} from './ProductRoute';
-import { billDetailsRouter } from '../../infrastructure/Routes/BillDetailsRoute';
+import { billDetailsRouter } from './BillDetailsRoute';
 import { userRoute } from './UserRoutes';
 import { userTypeRoute } from './UserTypesRoute';
 

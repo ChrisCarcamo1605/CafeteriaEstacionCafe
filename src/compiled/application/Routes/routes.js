@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const BillRoute_1 = require("./BillRoute");
 const ProductRoute_1 = require("./ProductRoute");
-const BillDetailsRoute_1 = require("../../infrastructure/Routes/BillDetailsRoute");
+const BillDetailsRoute_1 = require("./BillDetailsRoute");
 const UserRoutes_1 = require("./UserRoutes");
 const UserTypesRoute_1 = require("./UserTypesRoute");
 const mainRouter = express_1.default.Router();
