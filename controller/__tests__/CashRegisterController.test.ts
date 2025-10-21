@@ -165,10 +165,10 @@ describe("CashRegisterController", () => {
     });
   });
 
-  describe("createCashRegister", () => {
+  describe("saveCashRegister", () => {
     it("debería crear la caja registradora exitosamente", async () => {
       const datosCaja = {
-        number: "CAJA001",
+        number: 1,
         active: true,
       };
 
@@ -178,7 +178,7 @@ describe("CashRegisterController", () => {
       mockedCreateCashRegisterSchema.parse.mockReturnValue(datosCaja);
       mockService.save.mockResolvedValue(cajaGuardada);
 
-      await cashRegisterController.createCashRegister(mockReq, mockRes);
+      await cashRegisterController.saveCashRegister(mockReq, mockRes);
 
       expect(mockedCreateCashRegisterSchema.parse).toHaveBeenCalledWith(datosCaja);
       expect(mockService.save).toHaveBeenCalledWith(datosCaja);
@@ -207,7 +207,7 @@ describe("CashRegisterController", () => {
         throw errorZod;
       });
 
-      await cashRegisterController.createCashRegister(mockReq, mockRes);
+      await cashRegisterController.saveCashRegister(mockReq, mockRes);
 
       expect(mockedCreateCashRegisterSchema.parse).toHaveBeenCalledWith(datosInvalidos);
       expect(mockService.save).not.toHaveBeenCalled();
@@ -221,14 +221,14 @@ describe("CashRegisterController", () => {
     });
 
     it("debería manejar errores generales del servidor", async () => {
-      const datosCaja = { number: "CAJA001", active: true };
+      const datosCaja = { number: 1, active: true };
       const errorServidor = new Error("Error interno del servidor");
 
       mockReq.body = datosCaja;
       mockedCreateCashRegisterSchema.parse.mockReturnValue(datosCaja);
       mockService.save.mockRejectedValue(errorServidor);
 
-      await cashRegisterController.createCashRegister(mockReq, mockRes);
+      await cashRegisterController.saveCashRegister(mockReq, mockRes);
 
       expect(mockedCreateCashRegisterSchema.parse).toHaveBeenCalledWith(datosCaja);
       expect(mockService.save).toHaveBeenCalledWith(datosCaja);
@@ -240,14 +240,14 @@ describe("CashRegisterController", () => {
     });
 
     it("debería manejar errores sin mensaje específico", async () => {
-      const datosCaja = { number: "CAJA001", active: true };
+      const datosCaja = { number: 1, active: true };
       const errorSinMensaje = {};
 
       mockReq.body = datosCaja;
       mockedCreateCashRegisterSchema.parse.mockReturnValue(datosCaja);
       mockService.save.mockRejectedValue(errorSinMensaje);
 
-      await cashRegisterController.createCashRegister(mockReq, mockRes);
+      await cashRegisterController.saveCashRegister(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.send).toHaveBeenCalledWith({
@@ -260,7 +260,7 @@ describe("CashRegisterController", () => {
   describe("updateCashRegister", () => {
     it("debería actualizar la caja registradora exitosamente", async () => {
       const idParams = { id: "1" };
-      const datosActualizacion = { number: "CAJA001_UPDATED", active: false };
+      const datosActualizacion = { number: 1, active: false };
       const cajaActualizada = { cashRegisterId: 1, ...datosActualizacion };
 
       mockReq.params = idParams;
@@ -352,7 +352,7 @@ describe("CashRegisterController", () => {
 
     it("debería manejar el caso cuando la caja registradora no es encontrada", async () => {
       const idParams = { id: "999" };
-      const datosActualizacion = { number: "CAJA999" };
+      const datosActualizacion = { number: 999 };
       const errorNoEncontrada = new Error("Caja registradora no encontrada");
 
       mockReq.params = idParams;
@@ -372,7 +372,7 @@ describe("CashRegisterController", () => {
 
     it("debería manejar errores generales del servidor", async () => {
       const idParams = { id: "1" };
-      const datosActualizacion = { number: "CAJA001" };
+      const datosActualizacion = { number: 1 };
       const errorServidor = new Error("Error interno del servidor");
 
       mockReq.params = idParams;
@@ -506,7 +506,7 @@ describe("CashRegisterController", () => {
     });
   });
 
-  describe("getCashRegistersByNumber", () => {
+  describe("getCashRegisterByNumber", () => {
     it("debería retornar las cajas registradoras por número exitosamente", async () => {
       const numero = "CAJA001";
       const cajaEncontrada = { cashRegisterId: 1, number: numero, active: true };
@@ -514,7 +514,7 @@ describe("CashRegisterController", () => {
       mockReq.params = { number: numero };
       (mockService as any).getByNumber.mockResolvedValue(cajaEncontrada);
 
-      await cashRegisterController.getCashRegistersByNumber(mockReq, mockRes);
+      await cashRegisterController.getCashRegisterByNumber(mockReq, mockRes);
 
       expect((mockService as any).getByNumber).toHaveBeenCalledWith(numero);
       expect(mockRes.status).toHaveBeenCalledWith(200);
@@ -528,13 +528,13 @@ describe("CashRegisterController", () => {
       mockReq.params = { number: numero };
       (mockService as any).getByNumber.mockRejectedValue(new Error(mensajeError));
 
-      await cashRegisterController.getCashRegistersByNumber(mockReq, mockRes);
+      await cashRegisterController.getCashRegisterByNumber(mockReq, mockRes);
 
       expect((mockService as any).getByNumber).toHaveBeenCalledWith(numero);
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.send).toHaveBeenCalledWith({
         status: "error",
-        message: `Error al obtener las cajas registradoras por número: ${mensajeError}`,
+        message: `Error al obtener la caja registradora por número: ${mensajeError}`,
       });
     });
   });
