@@ -1,11 +1,24 @@
 import { Repository } from "typeorm";
 import { Ingredient } from "../../core/entities/Ingredient";
 import { IService } from "../../core/interfaces/IService";
-import { SaveIngredientDTO } from "../DTOs/IngredientDTOs";
+import { SaveIngredientDTO, UpdateIngredientDTO } from "../DTOs/IngredientDTOs";
 
 export class IngredientService implements IService {
   constructor(private ingredientRepo: Repository<Ingredient>) {
     this.ingredientRepo = ingredientRepo;
+  }
+
+  async saveAll(body: SaveIngredientDTO[]): Promise<Ingredient[]> {
+    const ingredients = body.map(data => {
+      const ingredient = new Ingredient();
+      ingredient.name = data.name;
+      ingredient.quantity = data.quantity;
+      ingredient.productId = data.productId;
+      ingredient.consumableId = data.consumableId;
+      return ingredient;
+    });
+
+    return await this.ingredientRepo.save(ingredients);
   }
 
   async save(body: SaveIngredientDTO): Promise<Ingredient> {
@@ -14,26 +27,13 @@ export class IngredientService implements IService {
     ingredient.quantity = body.quantity;
     ingredient.productId = body.productId;
     ingredient.consumableId = body.consumableId;
+    
     console.log("Guardando ingrediente...");
+    console.log(ingredient)
     return await this.ingredientRepo.save(ingredient);
   }
 
-  async saveAll(ingredients: SaveIngredientDTO[]): Promise<Ingredient[]> {
-    console.log("Guardando múltiples ingredientes...");
-    const ingredientEntities = ingredients.map(body => {
-      const ingredient = new Ingredient();
-      ingredient.name = body.name;
-      ingredient.quantity = body.quantity;
-      ingredient.productId = body.productId;
-      ingredient.consumableId = body.consumableId;
-      return ingredient;
-    });
-    
-    return await this.ingredientRepo.save(ingredientEntities);
-  }
-
   async delete(id: number): Promise<any> {
-    console.log(`Eliminando ingrediente con ID: ${id}`);
     const result = await this.ingredientRepo.delete(id);
     if (result.affected === 0) {
       throw new Error(`Ingrediente con ID ${id} no encontrado`);
@@ -41,9 +41,12 @@ export class IngredientService implements IService {
     return { message: "Ingrediente eliminado correctamente", id };
   }
 
-  async update(body: any): Promise<Ingredient> {
+  async update(body: UpdateIngredientDTO): Promise<Ingredient> {
     const { ingredientId, ...updateData } = body;
-    console.log(`Actualizando ingrediente con ID: ${ingredientId}`);
+
+    if (!ingredientId) {
+      throw new Error("ingredientId es requerido para actualizar");
+    }
 
     const ingredient = await this.ingredientRepo.findOne({ 
       where: { ingredientId } 
@@ -69,16 +72,20 @@ export class IngredientService implements IService {
     });
   }
 
-  async getById(id: number): Promise<Ingredient | null> {
-    console.log(`Obteniendo ingrediente con ID: ${id}`);
-    return await this.ingredientRepo.findOne({
+  async getById(id: number): Promise<Ingredient> {
+    const ingredient = await this.ingredientRepo.findOne({ 
       where: { ingredientId: id },
       relations: ["product", "consumable"]
     });
+    
+    if (!ingredient) {
+      throw new Error(`Ingrediente con ID ${id} no encontrado`);
+    }
+    
+    return ingredient;
   }
 
-  async getIngredientsByProduct(productId: number): Promise<Ingredient[]> {
-    console.log(`Obteniendo ingredientes del producto con ID: ${productId}`);
+  async getByProduct(productId: number): Promise<Ingredient[]> {
     return await this.ingredientRepo.find({
       where: { productId },
       relations: ["product", "consumable"],
@@ -86,12 +93,24 @@ export class IngredientService implements IService {
     });
   }
 
-  async getIngredientsByConsumable(consumableId: number): Promise<Ingredient[]> {
-    console.log(`Obteniendo ingredientes del consumible con ID: ${consumableId}`);
+  async getByConsumable(consumableId: number): Promise<Ingredient[]> {
     return await this.ingredientRepo.find({
       where: { consumableId },
       relations: ["product", "consumable"],
       order: { name: "ASC" }
     });
   }
+
+  async getIngredientsByProductAndConsumable(productId: number, consumableId: number): Promise<Ingredient[]> {
+    return await this.ingredientRepo.find({
+      where: { 
+        productId,
+        consumableId 
+      },
+      relations: ["product", "consumable"],
+      order: { name: "ASC" }
+    });
+  }
+
+
 }
