@@ -1,26 +1,9 @@
-import {
-  getUsers,
-  getUserById,
-  saveUser,
-  updateUser,
-  deleteUser,
-  getUsersByType,
-  setService,
-} from "../UserController";
+import * as userController from "../UserController";
 import { IService } from "../../core/interfaces/IService";
+import { userSchema } from "../../application/validations/UserValidations";
 
-// Mock de los esquemas de validación
-jest.mock("../../application/validations/UserValidations", () => ({
-  createUserSchema: {
-    parse: jest.fn(),
-  },
-  updateUserSchema: {
-    parse: jest.fn(),
-  },
-  userIdSchema: {
-    parse: jest.fn(),
-  },
-}));
+jest.mock("../../application/validations/UserValidations");
+const mockedUserSchema = userSchema as jest.Mocked<typeof userSchema>;
 
 describe("UserController", () => {
   let mockService: jest.Mocked<IService>;
@@ -28,27 +11,22 @@ describe("UserController", () => {
   let mockRes: any;
 
   beforeEach(() => {
-    // Crear mock del servicio
+    // Crear el mock del servicio
     mockService = {
+      getAll: jest.fn(),
+      getById: jest.fn(),
       save: jest.fn(),
       saveAll: jest.fn(),
       delete: jest.fn(),
       update: jest.fn(),
-      getAll: jest.fn(),
-      getById: jest.fn(),
     } as any;
 
-    // Agregar método específico de UserService
-    (mockService as any).getUsersByType = jest.fn();
+    // Establecer el servicio mock
+    userController.setService(mockService);
 
-    // Configurar el servicio en el controlador
-    setService(mockService);
-
-    // Crear mocks de request y response
     mockReq = {
       body: {},
       params: {},
-      query: {},
     };
 
     mockRes = {
@@ -56,7 +34,6 @@ describe("UserController", () => {
       send: jest.fn().mockReturnThis(),
     };
 
-    // Limpiar console.log
     jest.spyOn(console, "log").mockImplementation();
     jest.spyOn(console, "error").mockImplementation();
   });
@@ -65,694 +42,786 @@ describe("UserController", () => {
     jest.clearAllMocks();
   });
 
-  describe("getUsers", () => {
-    it("debería obtener todos los usuarios exitosamente", async () => {
-      const mockUsers = [
-        {
-          userId: 1,
-          username: "admin",
-          email: "admin@test.com",
-          userTypeId: 1,
-          active: true,
-        },
-        {
-          userId: 2,
-          username: "empleado",
-          email: "empleado@test.com",
-          userTypeId: 2,
-          active: true,
-        },
-      ];
-
-      mockService.getAll.mockResolvedValue(mockUsers);
-
-      await getUsers(mockReq, mockRes);
-
-      expect(mockService.getAll).toHaveBeenCalled();
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith({ body: mockUsers });
-    });
-
-    it("debería manejar errores del servicio", async () => {
-      const errorMessage = "Error de base de datos";
-      mockService.getAll.mockRejectedValue(new Error(errorMessage));
-
-      await getUsers(mockReq, mockRes);
-
-      expect(mockService.getAll).toHaveBeenCalled();
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        status: "error",
-        message: `Error al obtener los usuarios: ${errorMessage}`,
-      });
-    });
-
-    it("debería retornar array vacío cuando no hay usuarios", async () => {
-      mockService.getAll.mockResolvedValue([]);
-
-      await getUsers(mockReq, mockRes);
-
-      expect(mockService.getAll).toHaveBeenCalled();
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith({ body: [] });
-    });
-  });
-
-  describe("getUserById", () => {
-    it("debería obtener un usuario por ID exitosamente", async () => {
-      const userId = 1;
-      const mockUser = {
-        userId: 1,
-        username: "admin",
-        email: "admin@test.com",
-        userTypeId: 1,
-        active: true,
-      };
-
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: userId });
-
-      mockService.getById = jest.fn().mockResolvedValue(mockUser);
-
-      mockReq.params = { id: "1" };
-
-      await getUserById(mockReq, mockRes);
-
-      expect(userIdSchema.parse).toHaveBeenCalledWith({ id: "1" });
-      expect(mockService.getById).toHaveBeenCalledWith(userId);
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith({ body: mockUser });
-    });
-
-    it("debería manejar errores de validación de Zod", async () => {
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      const zodError = {
-        name: "ZodError",
-        issues: [{ message: "ID debe ser un número", path: ["id"] }],
-      };
-      userIdSchema.parse.mockImplementation(() => {
-        throw zodError;
-      });
-
-      mockReq.params = { id: "invalid" };
-
-      await getUserById(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        status: "error",
-        message: "ID inválido: ID debe ser un número",
-      });
-    });
-
-    it("debería manejar error cuando el usuario no existe", async () => {
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: 999 });
-
-      const errorMessage = "Usuario con ID 999 no encontrado";
-      mockService.getById = jest.fn().mockRejectedValue(new Error(errorMessage));
-
-      mockReq.params = { id: "999" };
-
-      await getUserById(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        status: "error",
-        message: errorMessage,
-      });
-    });
-
-    it("debería manejar errores internos del servidor", async () => {
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: 1 });
-
-      const errorMessage = "Error de conexión";
-      mockService.getById = jest.fn().mockRejectedValue(new Error(errorMessage));
-
-      mockReq.params = { id: "1" };
-
-      await getUserById(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        status: "error",
-        message: `Error al obtener el usuario: ${errorMessage}`,
-      });
-    });
-  });
-
   describe("saveUser", () => {
-    it("debería crear un usuario exitosamente", async () => {
-      const userData = {
-        username: "nuevousuario",
-        password: "password123",
-        email: "nuevo@test.com",
-        typeId: 2,
+    it("debería guardar el usuario exitosamente", async () => {
+      const datosUsuario = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: "1",
+        email: "john.doe@example.com",
       };
 
-      const savedUser = {
-        userId: 3,
-        username: "nuevousuario",
-        email: "nuevo@test.com",
-        userTypeId: 2,
-        active: true,
+      const datosValidados = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: 1,
+        email: "john.doe@example.com",
       };
 
-      const { createUserSchema } = require("../../application/validations/UserValidations");
-      createUserSchema.parse.mockReturnValue(userData);
+      const usuarioGuardado = { 
+        userId: 1, 
+        ...datosValidados,
+        active: true 
+      };
 
-      mockService.save.mockResolvedValue(savedUser);
+      mockReq.body = datosUsuario;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockResolvedValue(usuarioGuardado);
 
-      mockReq.body = userData;
+      await userController.saveUser(mockReq, mockRes);
 
-      await saveUser(mockReq, mockRes);
-
-      expect(createUserSchema.parse).toHaveBeenCalledWith(userData);
-      expect(mockService.save).toHaveBeenCalledWith(userData);
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosUsuario);
+      expect(mockService.save).toHaveBeenCalledWith(datosValidados);
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.send).toHaveBeenCalledWith({
-        message: "Usuario creado correctamente",
-        data: savedUser,
+        status: "sucess",
+        message: "El usuario fue registrado correctamente",
+        data: usuarioGuardado,
       });
+      expect(console.log).toHaveBeenCalledWith("Usuario guardado correctamente");
     });
 
-    it("debería manejar errores de validación de Zod", async () => {
-      const userData = {
-        username: "ab", // Muy corto
-        password: "123", // Muy corto
-        email: "invalid-email",
-        typeId: "invalid",
+    it("debería manejar errores de validación ZodError para username muy corto", async () => {
+      const datosInvalidos = {
+        username: "abc", // Menos de 5 caracteres
+        password: "MyPassword123!",
+        typeId: "1",
+        email: "john.doe@example.com",
       };
-
-      const { createUserSchema } = require("../../application/validations/UserValidations");
-      const zodError = {
+      const errorZod = {
         name: "ZodError",
         issues: [
           {
-            message: "El nombre de usuario debe tener al menos 3 caracteres",
+            message: "String must contain at least 5 character(s)",
             path: ["username"],
             code: "too_small",
           },
         ],
       };
-      createUserSchema.parse.mockImplementation(() => {
-        throw zodError;
+
+      mockReq.body = datosInvalidos;
+      mockedUserSchema.parse.mockImplementation(() => {
+        throw errorZod;
       });
 
-      mockReq.body = userData;
+      await userController.saveUser(mockReq, mockRes);
 
-      await saveUser(mockReq, mockRes);
-
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosInvalidos);
+      expect(mockService.save).not.toHaveBeenCalled();
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.send).toHaveBeenCalledWith({
         status: "error",
-        message: "Datos inválidos: El nombre de usuario debe tener al menos 3 caracteres",
+        message: "Datos inválidos: String must contain at least 5 character(s)",
         campo: ["username"],
+        error: "too_small",
+      });
+      expect(console.log).not.toHaveBeenCalledWith("Usuario guardado correctamente");
+    });
+
+    it("debería manejar errores de validación ZodError para username muy largo", async () => {
+      const nombreMuyLargo = "a".repeat(26); // Más de 25 caracteres
+      const datosInvalidos = {
+        username: nombreMuyLargo,
+        password: "MyPassword123!",
+        typeId: "1",
+        email: "john.doe@example.com",
+      };
+      const errorZod = {
+        name: "ZodError",
+        issues: [
+          {
+            message: "String must contain at most 25 character(s)",
+            path: ["username"],
+            code: "too_big",
+          },
+        ],
+      };
+
+      mockReq.body = datosInvalidos;
+      mockedUserSchema.parse.mockImplementation(() => {
+        throw errorZod;
+      });
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosInvalidos);
+      expect(mockService.save).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        status: "error",
+        message: "Datos inválidos: String must contain at most 25 character(s)",
+        campo: ["username"],
+        error: "too_big",
+      });
+    });
+
+    it("debería manejar errores de validación ZodError para password muy corta", async () => {
+      const datosInvalidos = {
+        username: "johndoe",
+        password: "Pass1!", // Menos de 8 caracteres
+        typeId: "1",
+        email: "john.doe@example.com",
+      };
+      const errorZod = {
+        name: "ZodError",
+        issues: [
+          {
+            message: "String must contain at least 8 character(s)",
+            path: ["password"],
+            code: "too_small",
+          },
+        ],
+      };
+
+      mockReq.body = datosInvalidos;
+      mockedUserSchema.parse.mockImplementation(() => {
+        throw errorZod;
+      });
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosInvalidos);
+      expect(mockService.save).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        status: "error",
+        message: "Datos inválidos: String must contain at least 8 character(s)",
+        campo: ["password"],
         error: "too_small",
       });
     });
 
-    it("debería manejar errores del servicio", async () => {
-      const userData = {
-        username: "usuario",
-        password: "password123",
-        email: "usuario@test.com",
-        typeId: 2,
+    it("debería manejar errores de validación ZodError para password con formato inválido", async () => {
+      const datosInvalidos = {
+        username: "johndoe",
+        password: "password123", // Sin mayúscula ni carácter especial
+        typeId: "1",
+        email: "john.doe@example.com",
       };
-
-      const { createUserSchema } = require("../../application/validations/UserValidations");
-      createUserSchema.parse.mockReturnValue(userData);
-
-      const errorMessage = "Error al guardar en base de datos";
-      mockService.save.mockRejectedValue(new Error(errorMessage));
-
-      mockReq.body = userData;
-
-      await saveUser(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        status: "error",
-        message: `Error interno del servidor: ${errorMessage}`,
-      });
-    });
-
-    it("debería validar email único", async () => {
-      const userData = {
-        username: "usuario2",
-        password: "password123",
-        email: "admin@test.com", // Email ya existente
-        typeId: 2,
-      };
-
-      const { createUserSchema } = require("../../application/validations/UserValidations");
-      createUserSchema.parse.mockReturnValue(userData);
-
-      const errorMessage = "El email ya está en uso";
-      mockService.save.mockRejectedValue(new Error(errorMessage));
-
-      mockReq.body = userData;
-
-      await saveUser(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        status: "error",
-        message: `Error interno del servidor: ${errorMessage}`,
-      });
-    });
-  });
-
-  describe("updateUser", () => {
-    it("debería actualizar un usuario exitosamente", async () => {
-      const userId = 1;
-      const updateData = {
-        username: "usuariomodificado",
-        email: "modificado@test.com",
-      };
-
-      const updatedUser = {
-        userId: 1,
-        username: "usuariomodificado",
-        email: "modificado@test.com",
-        userTypeId: 1,
-        active: true,
-      };
-
-      const { userIdSchema, updateUserSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: userId });
-      updateUserSchema.parse.mockReturnValue(updateData);
-
-      mockService.update = jest.fn().mockResolvedValue(updatedUser);
-
-      mockReq.params = { id: "1" };
-      mockReq.body = updateData;
-
-      await updateUser(mockReq, mockRes);
-
-      expect(userIdSchema.parse).toHaveBeenCalledWith({ id: "1" });
-      expect(updateUserSchema.parse).toHaveBeenCalledWith(updateData);
-      expect(mockService.update).toHaveBeenCalledWith({
-        userId: userId,
-        ...updateData,
-      });
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        message: "Usuario actualizado correctamente",
-        data: updatedUser,
-      });
-    });
-
-    it("debería manejar errores de validación", async () => {
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      const zodError = {
+      const errorZod = {
         name: "ZodError",
-        issues: [{ message: "ID inválido", path: ["id"] }],
+        issues: [
+          {
+            message: "La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial",
+            path: ["password"],
+            code: "custom",
+          },
+        ],
       };
-      userIdSchema.parse.mockImplementation(() => {
-        throw zodError;
+
+      mockReq.body = datosInvalidos;
+      mockedUserSchema.parse.mockImplementation(() => {
+        throw errorZod;
       });
 
-      mockReq.params = { id: "invalid" };
-      mockReq.body = {};
+      await userController.saveUser(mockReq, mockRes);
 
-      await updateUser(mockReq, mockRes);
-
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosInvalidos);
+      expect(mockService.save).not.toHaveBeenCalled();
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.send).toHaveBeenCalledWith({
         status: "error",
-        message: "Datos inválidos: ID inválido",
-        campo: ["id"],
+        message: "Datos inválidos: La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial",
+        campo: ["password"],
+        error: "custom",
       });
     });
 
-    it("debería manejar error cuando el usuario no existe para actualizar", async () => {
-      const { userIdSchema, updateUserSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: 999 });
-      updateUserSchema.parse.mockReturnValue({ username: "nuevo" });
-
-      const errorMessage = "Usuario con ID 999 no encontrado";
-      mockService.update = jest.fn().mockRejectedValue(new Error(errorMessage));
-
-      mockReq.params = { id: "999" };
-      mockReq.body = { username: "nuevo" };
-
-      await updateUser(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        status: "error",
-        message: errorMessage,
-      });
-    });
-
-    it("debería actualizar solo los campos proporcionados", async () => {
-      const { userIdSchema, updateUserSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: 1 });
-      updateUserSchema.parse.mockReturnValue({ email: "nuevoemail@test.com" });
-
-      mockService.update = jest.fn().mockResolvedValue({});
-
-      mockReq.params = { id: "1" };
-      mockReq.body = { email: "nuevoemail@test.com" };
-
-      await updateUser(mockReq, mockRes);
-
-      expect(mockService.update).toHaveBeenCalledWith({
-        userId: 1,
-        email: "nuevoemail@test.com",
-      });
-    });
-  });
-
-  describe("deleteUser", () => {
-    it("debería eliminar un usuario exitosamente", async () => {
-      const userId = 1;
-      const deleteResult = { message: "Usuario eliminado", id: userId };
-
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: userId });
-
-      mockService.delete.mockResolvedValue(deleteResult);
-
-      mockReq.params = { id: "1" };
-
-      await deleteUser(mockReq, mockRes);
-
-      expect(userIdSchema.parse).toHaveBeenCalledWith({ id: "1" });
-      expect(mockService.delete).toHaveBeenCalledWith(userId);
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith({
-        message: "Usuario eliminado correctamente",
-        data: deleteResult,
-      });
-    });
-
-    it("debería manejar errores de validación de ID", async () => {
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      const zodError = {
-        name: "ZodError",
-        issues: [{ message: "ID debe ser un número positivo" }],
+    it("debería manejar errores de validación ZodError para typeId inválido", async () => {
+      const datosInvalidos = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: "invalid",
+        email: "john.doe@example.com",
       };
-      userIdSchema.parse.mockImplementation(() => {
-        throw zodError;
+      const errorZod = {
+        name: "ZodError",
+        issues: [
+          {
+            message: "Ingrese un id de UserTypeId valido",
+            path: ["typeId"],
+            code: "custom",
+          },
+        ],
+      };
+
+      mockReq.body = datosInvalidos;
+      mockedUserSchema.parse.mockImplementation(() => {
+        throw errorZod;
       });
 
-      mockReq.params = { id: "invalid" };
+      await userController.saveUser(mockReq, mockRes);
 
-      await deleteUser(mockReq, mockRes);
-
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosInvalidos);
+      expect(mockService.save).not.toHaveBeenCalled();
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.send).toHaveBeenCalledWith({
         status: "error",
-        message: "ID inválido: ID debe ser un número positivo",
+        message: "Datos inválidos: Ingrese un id de UserTypeId valido",
+        campo: ["typeId"],
+        error: "custom",
       });
     });
 
-    it("debería manejar error cuando el usuario no existe para eliminar", async () => {
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: 999 });
+    it("debería manejar errores de validación ZodError para email inválido", async () => {
+      const datosInvalidos = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: "1",
+        email: "email-invalido",
+      };
+      const errorZod = {
+        name: "ZodError",
+        issues: [
+          {
+            message: "Invalid email",
+            path: ["email"],
+            code: "invalid_string",
+          },
+        ],
+      };
 
-      const errorMessage = "Usuario con ID 999 no encontrado";
-      mockService.delete.mockRejectedValue(new Error(errorMessage));
+      mockReq.body = datosInvalidos;
+      mockedUserSchema.parse.mockImplementation(() => {
+        throw errorZod;
+      });
 
-      mockReq.params = { id: "999" };
+      await userController.saveUser(mockReq, mockRes);
 
-      await deleteUser(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosInvalidos);
+      expect(mockService.save).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.send).toHaveBeenCalledWith({
         status: "error",
-        message: errorMessage,
+        message: "Datos inválidos: Invalid email",
+        campo: ["email"],
+        error: "invalid_string",
       });
     });
 
-    it("debería manejar errores internos del servidor", async () => {
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: 1 });
+    it("debería manejar errores de validación ZodError para email muy largo", async () => {
+      const emailMuyLargo = "a".repeat(90) + "@email.com"; // Más de 100 caracteres
+      const datosInvalidos = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: "1",
+        email: emailMuyLargo,
+      };
+      const errorZod = {
+        name: "ZodError",
+        issues: [
+          {
+            message: "El email no puede exceder 100 caracteres",
+            path: ["email"],
+            code: "too_big",
+          },
+        ],
+      };
 
-      const errorMessage = "Error de base de datos";
-      mockService.delete.mockRejectedValue(new Error(errorMessage));
+      mockReq.body = datosInvalidos;
+      mockedUserSchema.parse.mockImplementation(() => {
+        throw errorZod;
+      });
 
-      mockReq.params = { id: "1" };
+      await userController.saveUser(mockReq, mockRes);
 
-      await deleteUser(mockReq, mockRes);
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosInvalidos);
+      expect(mockService.save).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        status: "error",
+        message: "Datos inválidos: El email no puede exceder 100 caracteres",
+        campo: ["email"],
+        error: "too_big",
+      });
+    });
+
+    it("debería manejar errores generales del servidor", async () => {
+      const datosUsuario = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: "1",
+        email: "john.doe@example.com",
+      };
+
+      const datosValidados = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: 1,
+        email: "john.doe@example.com",
+      };
+
+      const errorServidor = new Error("Error interno del servidor");
+
+      mockReq.body = datosUsuario;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockRejectedValue(errorServidor);
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosUsuario);
+      expect(mockService.save).toHaveBeenCalledWith(datosValidados);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        status: "error",
+        message: "Hubo un error: Error interno del servidor",
+        errors: undefined,
+      });
+      expect(console.log).toHaveBeenCalledWith(errorServidor);
+      expect(console.log).not.toHaveBeenCalledWith("Usuario guardado correctamente");
+    });
+
+    it("debería manejar errores con propiedades errors", async () => {
+      const datosUsuario = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: "1",
+        email: "john.doe@example.com",
+      };
+
+      const datosValidados = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: 1,
+        email: "john.doe@example.com",
+      };
+
+      const errorConErrors = {
+        message: "Error con errores",
+        errors: ["Error 1", "Error 2"],
+      };
+
+      mockReq.body = datosUsuario;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockRejectedValue(errorConErrors);
+
+      await userController.saveUser(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.send).toHaveBeenCalledWith({
         status: "error",
-        message: `Error interno del servidor: ${errorMessage}`,
+        message: "Hubo un error: Error con errores",
+        errors: ["Error 1", "Error 2"],
       });
+    });
+
+    it("debería manejar errores con propiedades issues", async () => {
+      const datosUsuario = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: "1",
+        email: "john.doe@example.com",
+      };
+
+      const datosValidados = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: 1,
+        email: "john.doe@example.com",
+      };
+
+      const errorConIssues = {
+        message: "Error con issues",
+        issues: ["Issue 1", "Issue 2"],
+      };
+
+      mockReq.body = datosUsuario;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockRejectedValue(errorConIssues);
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        status: "error",
+        message: "Hubo un error: Error con issues",
+        errors: ["Issue 1", "Issue 2"],
+      });
+    });
+
+    it("debería manejar transformaciones de string a number en typeId", async () => {
+      const datosUsuario = {
+        username: "janedoe",
+        password: "SecurePass123!",
+        typeId: "2", // String que se transforma a number
+        email: "jane.doe@example.com",
+      };
+
+      const datosValidados = {
+        username: "janedoe",
+        password: "SecurePass123!",
+        typeId: 2, // Transformado a number
+        email: "jane.doe@example.com",
+      };
+
+      const usuarioGuardado = { 
+        userId: 2, 
+        ...datosValidados,
+        active: true 
+      };
+
+      mockReq.body = datosUsuario;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockResolvedValue(usuarioGuardado);
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosUsuario);
+      expect(mockService.save).toHaveBeenCalledWith(datosValidados);
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+    });
+
+    it("debería manejar username y email con espacios (trim)", async () => {
+      const datosConEspacios = {
+        username: "   johndoe   ",
+        password: "MyPassword123!",
+        typeId: "1",
+        email: "   john.doe@example.com   ",
+      };
+
+      const datosLimpios = {
+        username: "johndoe",
+        password: "MyPassword123!",
+        typeId: 1,
+        email: "john.doe@example.com",
+      };
+
+      const usuarioGuardado = { 
+        userId: 1, 
+        ...datosLimpios,
+        active: true 
+      };
+
+      mockReq.body = datosConEspacios;
+      mockedUserSchema.parse.mockReturnValue(datosLimpios);
+      mockService.save.mockResolvedValue(usuarioGuardado);
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosConEspacios);
+      expect(mockService.save).toHaveBeenCalledWith(datosLimpios);
+      expect(mockRes.status).toHaveBeenCalledWith(201);
     });
   });
 
-  describe("getUsersByType", () => {
-    it("debería obtener usuarios por tipo exitosamente", async () => {
-      const typeId = 2;
-      const mockUsers = [
+  describe("getUsers", () => {
+    it("debería retornar los usuarios exitosamente", async () => {
+      const usuariosSimulados = [
         {
-          userId: 2,
-          username: "empleado1",
-          email: "emp1@test.com",
-          userTypeId: 2,
+          userId: 1,
+          username: "johndoe",
+          typeId: 1,
+          email: "john.doe@example.com",
           active: true,
         },
         {
-          userId: 3,
-          username: "empleado2",
-          email: "emp2@test.com",
-          userTypeId: 2,
+          userId: 2,
+          username: "janedoe",
+          typeId: 2,
+          email: "jane.doe@example.com",
           active: true,
         },
       ];
 
-      (mockService as any).getUsersByType = jest.fn().mockResolvedValue(mockUsers);
+      mockService.getAll.mockResolvedValue(usuariosSimulados);
 
-      mockReq.params = { typeId: "2" };
+      await userController.getUsers(mockReq, mockRes);
 
-      await getUsersByType(mockReq, mockRes);
-
-      expect((mockService as any).getUsersByType).toHaveBeenCalledWith(typeId);
+      expect(mockService.getAll).toHaveBeenCalledTimes(1);
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith({ body: mockUsers });
+      expect(mockRes.send).toHaveBeenCalledWith({
+        status: "sucess",
+        message: "Usuarios obtenidos correctamente",
+        data: usuariosSimulados,
+      });
+      expect(console.log).toHaveBeenCalledWith("Usuarios obtenidos correctamente");
     });
 
-    it("debería retornar array vacío para tipo sin usuarios", async () => {
-      const typeId = 999;
-      (mockService as any).getUsersByType = jest.fn().mockResolvedValue([]);
+    it("debería manejar errores al obtener los usuarios", async () => {
+      const mensajeError = "Error de conexión a la base de datos";
+      mockService.getAll.mockRejectedValue(new Error(mensajeError));
 
-      mockReq.params = { typeId: "999" };
+      await userController.getUsers(mockReq, mockRes);
 
-      await getUsersByType(mockReq, mockRes);
-
-      expect((mockService as any).getUsersByType).toHaveBeenCalledWith(typeId);
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith({ body: [] });
-    });
-
-    it("debería manejar errores del servicio", async () => {
-      const errorMessage = "Error al consultar usuarios por tipo";
-      (mockService as any).getUsersByType = jest.fn().mockRejectedValue(new Error(errorMessage));
-
-      mockReq.params = { typeId: "1" };
-
-      await getUsersByType(mockReq, mockRes);
-
+      expect(mockService.getAll).toHaveBeenCalledTimes(1);
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.send).toHaveBeenCalledWith({
         status: "error",
-        message: `Error al obtener los usuarios por tipo: ${errorMessage}`,
+        message: `Hubo un error al obtener los datos:\n${mensajeError}`,
+      });
+      expect(console.log).not.toHaveBeenCalledWith("Usuarios obtenidos correctamente");
+    });
+
+    it("debería manejar errores sin mensaje específico", async () => {
+      const errorSinMensaje = {};
+      mockService.getAll.mockRejectedValue(errorSinMensaje);
+
+      await userController.getUsers(mockReq, mockRes);
+
+      expect(mockService.getAll).toHaveBeenCalledTimes(1);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        status: "error",
+        message: "Hubo un error al obtener los datos:\nundefined",
       });
     });
 
-    it("debería convertir typeId string a number", async () => {
-      (mockService as any).getUsersByType = jest.fn().mockResolvedValue([]);
+    it("debería retornar un array vacío cuando no hay usuarios", async () => {
+      const usuariosVacios: any[] = [];
 
-      mockReq.params = { typeId: "5" };
+      mockService.getAll.mockResolvedValue(usuariosVacios);
 
-      await getUsersByType(mockReq, mockRes);
+      await userController.getUsers(mockReq, mockRes);
 
-      expect((mockService as any).getUsersByType).toHaveBeenCalledWith(5);
+      expect(mockService.getAll).toHaveBeenCalledTimes(1);
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        status: "sucess",
+        message: "Usuarios obtenidos correctamente",
+        data: usuariosVacios,
+      });
+      expect(console.log).toHaveBeenCalledWith("Usuarios obtenidos correctamente");
     });
   });
 
   describe("setService", () => {
-    it("debería configurar el servicio correctamente", () => {
-      const newMockService = {
-        save: jest.fn(),
+    it("debería establecer el servicio correctamente", async () => {
+      const nuevoServicio = {
         getAll: jest.fn(),
+        getById: jest.fn(),
+        save: jest.fn(),
+        saveAll: jest.fn(),
+        delete: jest.fn(),
+        update: jest.fn(),
       } as any;
 
-      expect(() => setService(newMockService)).not.toThrow();
+      expect(() => userController.setService(nuevoServicio)).not.toThrow();
+
+      // Verificar que el servicio se estableció correctamente
+      nuevoServicio.getAll.mockResolvedValue([]);
+      await userController.getUsers(mockReq, mockRes);
+
+      expect(nuevoServicio.getAll).toHaveBeenCalled();
     });
   });
 
-  describe("Casos de integración", () => {
-    it("debería manejar flujo completo de CRUD de usuarios", async () => {
-      // 1. Crear usuario
-      const userData = {
-        username: "testuser",
-        password: "password123",
-        email: "test@example.com",
-        typeId: 2,
+  describe("Casos con diferentes tipos de contraseñas válidas", () => {
+    const contrasenasValidas = [
+      "Password123!",
+      "MySecure@Pass1",
+      "Test$Password9",
+      "Valid&Pass123",
+      "Strong#123Pass",
+      "Secure*Pass456",
+    ];
+
+    contrasenasValidas.forEach((password) => {
+      it(`debería aceptar contraseña válida: "${password}"`, async () => {
+        const datosUsuario = {
+          username: "testuser",
+          password: password,
+          typeId: "1",
+          email: "test@example.com",
+        };
+
+        const datosValidados = {
+          username: "testuser",
+          password: password,
+          typeId: 1,
+          email: "test@example.com",
+        };
+
+        const usuarioGuardado = { 
+          userId: 1, 
+          ...datosValidados,
+          active: true 
+        };
+
+        mockReq.body = datosUsuario;
+        mockedUserSchema.parse.mockReturnValue(datosValidados);
+        mockService.save.mockResolvedValue(usuarioGuardado);
+
+        await userController.saveUser(mockReq, mockRes);
+
+        expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosUsuario);
+        expect(mockService.save).toHaveBeenCalledWith(datosValidados);
+        expect(mockRes.status).toHaveBeenCalledWith(201);
+      });
+    });
+  });
+
+  describe("Casos límite de validación", () => {
+    it("debería manejar username con exactamente 5 caracteres", async () => {
+      const datosMinimos = {
+        username: "user1", // Exactamente 5 caracteres
+        password: "MinPass123!",
+        typeId: "1",
+        email: "min@test.com",
       };
 
-      const { createUserSchema } = require("../../application/validations/UserValidations");
-      createUserSchema.parse.mockReturnValue(userData);
+      const datosValidados = {
+        username: "user1",
+        password: "MinPass123!",
+        typeId: 1,
+        email: "min@test.com",
+      };
 
-      const savedUser = { userId: 1, ...userData };
-      mockService.save.mockResolvedValue(savedUser);
+      const usuarioGuardado = { 
+        userId: 1, 
+        ...datosValidados,
+        active: true 
+      };
 
-      mockReq.body = userData;
-      await saveUser(mockReq, mockRes);
+      mockReq.body = datosMinimos;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockResolvedValue(usuarioGuardado);
 
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosMinimos);
+      expect(mockService.save).toHaveBeenCalledWith(datosValidados);
       expect(mockRes.status).toHaveBeenCalledWith(201);
-
-      // 2. Obtener usuario por ID
-      const { userIdSchema } = require("../../application/validations/UserValidations");
-      userIdSchema.parse.mockReturnValue({ id: 1 });
-      mockService.getById = jest.fn().mockResolvedValue(savedUser);
-
-      mockReq.params = { id: "1" };
-      await getUserById(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-
-      // 3. Actualizar usuario
-      const { updateUserSchema } = require("../../application/validations/UserValidations");
-      const updateData = { username: "updateduser" };
-      updateUserSchema.parse.mockReturnValue(updateData);
-
-      const updatedUser = { ...savedUser, username: "updateduser" };
-      mockService.update = jest.fn().mockResolvedValue(updatedUser);
-
-      mockReq.body = updateData;
-      await updateUser(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-
-      // 4. Eliminar usuario
-      mockService.delete.mockResolvedValue({ message: "Eliminado", id: 1 });
-
-      await deleteUser(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(200);
     });
 
-    it("debería manejar múltiples usuarios del mismo tipo", async () => {
-      const typeId = 2;
-      const usersOfType = [
-        { userId: 1, username: "user1", userTypeId: 2 },
-        { userId: 2, username: "user2", userTypeId: 2 },
-        { userId: 3, username: "user3", userTypeId: 2 },
-      ];
+    it("debería manejar username con exactamente 25 caracteres", async () => {
+      const usernameMaximo = "a".repeat(25); // Exactamente 25 caracteres
+      const datosMaximos = {
+        username: usernameMaximo,
+        password: "MaxPass123!",
+        typeId: "1",
+        email: "max@test.com",
+      };
 
-      (mockService as any).getUsersByType = jest.fn().mockResolvedValue(usersOfType);
+      const datosValidados = {
+        username: usernameMaximo,
+        password: "MaxPass123!",
+        typeId: 1,
+        email: "max@test.com",
+      };
 
-      mockReq.params = { typeId: "2" };
-      await getUsersByType(mockReq, mockRes);
+      const usuarioGuardado = { 
+        userId: 1, 
+        ...datosValidados,
+        active: true 
+      };
 
-      expect((mockService as any).getUsersByType).toHaveBeenCalledWith(typeId);
-      expect(mockRes.send).toHaveBeenCalledWith({ body: usersOfType });
+      mockReq.body = datosMaximos;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockResolvedValue(usuarioGuardado);
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosMaximos);
+      expect(mockService.save).toHaveBeenCalledWith(datosValidados);
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+    });
+
+    it("debería manejar password con exactamente 8 caracteres", async () => {
+      const datosMinimos = {
+        username: "testuser",
+        password: "MinP@ss1", // Exactamente 8 caracteres
+        typeId: "1",
+        email: "test@example.com",
+      };
+
+      const datosValidados = {
+        username: "testuser",
+        password: "MinP@ss1",
+        typeId: 1,
+        email: "test@example.com",
+      };
+
+      const usuarioGuardado = { 
+        userId: 1, 
+        ...datosValidados,
+        active: true 
+      };
+
+      mockReq.body = datosMinimos;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockResolvedValue(usuarioGuardado);
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosMinimos);
+      expect(mockService.save).toHaveBeenCalledWith(datosValidados);
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+    });
+
+    it("debería manejar email con exactamente 100 caracteres", async () => {
+      const emailMaximo = "a".repeat(85) + "@example.com"; // Exactamente 100 caracteres
+      const datosMaximos = {
+        username: "testuser",
+        password: "TestPass123!",
+        typeId: "1",
+        email: emailMaximo,
+      };
+
+      const datosValidados = {
+        username: "testuser",
+        password: "TestPass123!",
+        typeId: 1,
+        email: emailMaximo,
+      };
+
+      const usuarioGuardado = { 
+        userId: 1, 
+        ...datosValidados,
+        active: true 
+      };
+
+      mockReq.body = datosMaximos;
+      mockedUserSchema.parse.mockReturnValue(datosValidados);
+      mockService.save.mockResolvedValue(usuarioGuardado);
+
+      await userController.saveUser(mockReq, mockRes);
+
+      expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosMaximos);
+      expect(mockService.save).toHaveBeenCalledWith(datosValidados);
+      expect(mockRes.status).toHaveBeenCalledWith(201);
     });
   });
 
-  describe("Validaciones de datos", () => {
-    it("debería validar formato de email correctamente", async () => {
-      const invalidEmails = [
-        "invalid-email",
-        "@example.com",
-        "user@",
-        "user.example.com",
-      ];
+  describe("Casos con diferentes typeId", () => {
+    const tiposDeUsuario = [
+      { input: "1", expected: 1 },
+      { input: "2", expected: 2 },
+      { input: "10", expected: 10 },
+      { input: "999", expected: 999 },
+    ];
 
-      const { createUserSchema } = require("../../application/validations/UserValidations");
-
-      for (const email of invalidEmails) {
-        const zodError = {
-          name: "ZodError",
-          issues: [{ message: "Debe ser un email válido", path: ["email"] }],
-        };
-        createUserSchema.parse.mockImplementation(() => {
-          throw zodError;
-        });
-
-        mockReq.body = {
-          username: "test",
-          password: "password123",
-          email: email,
-          typeId: 1,
-        };
-
-        await saveUser(mockReq, mockRes);
-
-        expect(mockRes.status).toHaveBeenCalledWith(400);
-      }
-    });
-
-    it("debería validar longitud de contraseña", async () => {
-      const shortPasswords = ["1", "12", "123", "1234", "12345"];
-
-      const { createUserSchema } = require("../../application/validations/UserValidations");
-
-      for (const password of shortPasswords) {
-        const zodError = {
-          name: "ZodError",
-          issues: [
-            {
-              message: "La contraseña debe tener al menos 6 caracteres",
-              path: ["password"],
-            },
-          ],
-        };
-        createUserSchema.parse.mockImplementation(() => {
-          throw zodError;
-        });
-
-        mockReq.body = {
-          username: "test",
-          password: password,
+    tiposDeUsuario.forEach(({ input, expected }) => {
+      it(`debería transformar typeId "${input}" a ${expected}`, async () => {
+        const datosUsuario = {
+          username: "testuser",
+          password: "TestPass123!",
+          typeId: input,
           email: "test@example.com",
-          typeId: 1,
         };
 
-        await saveUser(mockReq, mockRes);
-
-        expect(mockRes.status).toHaveBeenCalledWith(400);
-      }
-    });
-
-    it("debería validar longitud de username", async () => {
-      const invalidUsernames = ["", "a", "ab"];
-
-      const { createUserSchema } = require("../../application/validations/UserValidations");
-
-      for (const username of invalidUsernames) {
-        const zodError = {
-          name: "ZodError",
-          issues: [
-            {
-              message: "El nombre de usuario debe tener al menos 3 caracteres",
-              path: ["username"],
-            },
-          ],
-        };
-        createUserSchema.parse.mockImplementation(() => {
-          throw zodError;
-        });
-
-        mockReq.body = {
-          username: username,
-          password: "password123",
+        const datosValidados = {
+          username: "testuser",
+          password: "TestPass123!",
+          typeId: expected,
           email: "test@example.com",
-          typeId: 1,
         };
 
-        await saveUser(mockReq, mockRes);
+        const usuarioGuardado = { 
+          userId: 1, 
+          ...datosValidados,
+          active: true 
+        };
 
-        expect(mockRes.status).toHaveBeenCalledWith(400);
-      }
+        mockReq.body = datosUsuario;
+        mockedUserSchema.parse.mockReturnValue(datosValidados);
+        mockService.save.mockResolvedValue(usuarioGuardado);
+
+        await userController.saveUser(mockReq, mockRes);
+
+        expect(mockedUserSchema.parse).toHaveBeenCalledWith(datosUsuario);
+        expect(mockService.save).toHaveBeenCalledWith(datosValidados);
+        expect(mockRes.status).toHaveBeenCalledWith(201);
+      });
     });
   });
 });

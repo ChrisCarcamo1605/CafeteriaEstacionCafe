@@ -7,6 +7,10 @@ export class UserTypeService implements IService {
   constructor(typeRepository: Repository<UserType>) {
     this.typeRepo = typeRepository;
   }
+  async getById(id: number): Promise<any | null> {
+    console.log(`Obteniendo factura con ID: ${id}`);
+    return await this.typeRepo.findOne({ where: { userTypeId: id } });
+  }
 
   async save(body: any): Promise<any> {
     const type = new UserType();
@@ -17,7 +21,7 @@ export class UserTypeService implements IService {
   }
 
   async saveAll(body: any[]): Promise<UserType[]> {
-    const userTypes = body.map((data) => {
+    const userTypes = body.map(data => {
       const type = new UserType();
       type.name = data.name;
       type.permissionLevel = data.permissionLevel;
@@ -54,7 +58,7 @@ export class UserTypeService implements IService {
   async getAll(): Promise<any[]> {
     console.log(`Obteniendo tipos de usuarios...`);
     return this.typeRepo.find({
-      order: { permissionLevel: "ASC" },
+      order: { permissionLevel: "ASC" }
     });
   }
 
@@ -69,7 +73,7 @@ export class UserTypeService implements IService {
   async getByPermissionLevel(level: number): Promise<UserType[]> {
     return await this.typeRepo.find({
       where: { permissionLevel: level },
-      order: { name: "ASC" },
+      order: { name: "ASC" }
     });
   }
 }
