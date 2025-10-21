@@ -10,18 +10,19 @@ export class UserService implements IService {
   constructor(userRepo: Repository<User>) {
     this.userRepository = userRepo;
   }
+  async getById(id: number): Promise<any | null> {
+    console.log(`Obteniendo usuario con ID: ${id}`);
+    return await this.userRepository.findOne({ where: { userId:id } });  }
 
   async saveAll(body: SaveUserDTO[]): Promise<User[]> {
-    const users = await Promise.all(
-      body.map(async (userData) => {
-        const user = new User();
-        user.username = userData.username;
-        user.password = await this.encryptPassword(userData.password);
-        user.userTypeId = userData.typeId;
-        user.email = userData.email;
-        return user;
-      })
-    );
+    const users = await Promise.all(body.map(async (userData) => {
+      const user = new User();
+      user.username = userData.username;
+      user.password = await this.encryptPassword(userData.password);
+      user.userTypeId = userData.typeId;
+      user.email = userData.email;
+      return user;
+    }));
 
     return await this.userRepository.save(users);
   }
@@ -41,7 +42,7 @@ export class UserService implements IService {
   async delete(id: number): Promise<any> {
     const user = await this.getById(id);
     user.active = false;
-
+    
     await this.userRepository.save(user);
     return { message: "Usuario desactivado correctamente", id };
   }
@@ -69,16 +70,16 @@ export class UserService implements IService {
 
   async getAll(): Promise<any[]> {
     console.log(`Obteniendo usuarios...`);
-    return this.userRepository.find({
+    return this.userRepository.find({ 
       relations: ["userType"],
-      order: { username: "ASC" },
+      order: { username: "ASC" }
     });
   }
 
   async getById(id: number): Promise<any> {
-    const user = await this.userRepository.findOne({
+    const user = await this.userRepository.findOne({ 
       where: { userId: id },
-      relations: ["userType"],
+      relations: ["userType"]
     });
     if (!user) {
       throw new Error(`Usuario con ID ${id} no encontrado`);
@@ -90,14 +91,14 @@ export class UserService implements IService {
     return await this.userRepository.find({
       where: { userTypeId: typeId },
       relations: ["userType"],
-      order: { username: "ASC" },
+      order: { username: "ASC" }
     });
   }
 
   async getUserByUsername(username: string): Promise<User | null> {
     return await this.userRepository.findOne({
       where: { username },
-      relations: ["userType"],
+      relations: ["userType"]
     });
   }
 

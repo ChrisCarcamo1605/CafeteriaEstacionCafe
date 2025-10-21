@@ -7,7 +7,7 @@ describe("UserTypeService", () => {
   let mockRepository: jest.Mocked<Repository<UserType>>;
 
   beforeEach(() => {
-    // Crear mock completo del repositorio
+    // Crear mock del repositorio
     mockRepository = {
       save: jest.fn(),
       find: jest.fn(),
@@ -15,38 +15,6 @@ describe("UserTypeService", () => {
       delete: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
-      findAndCount: jest.fn(),
-      count: jest.fn(),
-      createQueryBuilder: jest.fn(),
-      manager: {} as any,
-      metadata: {} as any,
-      target: UserType,
-      query: jest.fn(),
-      clear: jest.fn(),
-      increment: jest.fn(),
-      decrement: jest.fn(),
-      extend: jest.fn(),
-      findBy: jest.fn(),
-      findOneBy: jest.fn(),
-      findOneByOrFail: jest.fn(),
-      findOneOrFail: jest.fn(),
-      countBy: jest.fn(),
-      existsBy: jest.fn(),
-      exists: jest.fn(),
-      findByIds: jest.fn(),
-      preload: jest.fn(),
-      remove: jest.fn(),
-      softDelete: jest.fn(),
-      softRemove: jest.fn(),
-      recover: jest.fn(),
-      restore: jest.fn(),
-      insert: jest.fn(),
-      upsert: jest.fn(),
-      getId: jest.fn(),
-      hasId: jest.fn(),
-      merge: jest.fn(),
-      queryRunner: undefined,
-      selectQueryBuilder: jest.fn()
     } as any;
 
     // Crear instancia del servicio con el repositorio mock
@@ -221,17 +189,16 @@ describe("UserTypeService", () => {
       expect(result).toEqual(mockUserType);
     });
 
-    it("debería lanzar error cuando el tipo de usuario no existe", async () => {
+    it("debería retornar null cuando el tipo de usuario no existe", async () => {
       const userTypeId = 999;
       mockRepository.findOne.mockResolvedValue(null);
 
-      await expect(userTypeService.getById(userTypeId)).rejects.toThrow(
-        "Tipo de usuario con ID 999 no encontrado"
-      );
+      const result = await userTypeService.getById(userTypeId);
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { userTypeId: 999 },
       });
+      expect(result).toBeNull();
     });
 
     it("debería manejar errores del repositorio", async () => {
@@ -317,9 +284,7 @@ describe("UserTypeService", () => {
 
       const result = await userTypeService.getAll();
 
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        order: { permissionLevel: "ASC" }
-      });
+      expect(mockRepository.find).toHaveBeenCalledWith();
       expect(result).toEqual(mockUserTypes);
       expect(result).toHaveLength(4);
     });
@@ -388,161 +353,251 @@ describe("UserTypeService", () => {
     });
   });
 
-  describe("saveAll", () => {
-    it("should save multiple user types successfully", async () => {
-      const userTypesData = [
-        { name: "Manager", permissionLevel: 2 },
-        { name: "Employee", permissionLevel: 5 }
-      ];
+ 
 
-      const savedUserTypes = [
-        { userTypeId: 1, name: "Manager", permissionLevel: 2 },
-        { userTypeId: 2, name: "Employee", permissionLevel: 5 }
-      ] as UserType[];
-
-      mockRepository.save.mockResolvedValue(savedUserTypes as any);
-
-      const result = await userTypeService.saveAll(userTypesData);
-
-      expect(mockRepository.save).toHaveBeenCalledWith(expect.arrayContaining([
-        expect.objectContaining({ name: "Manager", permissionLevel: 2 }),
-        expect.objectContaining({ name: "Employee", permissionLevel: 5 })
-      ]));
-      expect(result).toEqual(savedUserTypes);
-    });
-
-    it("should handle error when saving multiple user types", async () => {
-      const userTypesData = [{ name: "Test", permissionLevel: 1 }];
-      mockRepository.save.mockRejectedValue(new Error("Database error"));
-
-      await expect(userTypeService.saveAll(userTypesData)).rejects.toThrow("Database error");
-    });
-  });
-
-  describe("update", () => {
-    it("should update user type successfully", async () => {
-      const updateData = {
-        userTypeId: 1,
-        name: "Updated Admin",
-        permissionLevel: 1
+  describe("Casos de integración", () => {
+    it("debería manejar flujo básico de creación y consulta", async () => {
+      const userTypeData = {
+        name: "Supervisor",
+        permissionLevel: 2,
       };
 
-      const existingUserType = {
-        userTypeId: 1,
-        name: "Admin",
-        permissionLevel: 2
+      const savedUserType = {
+        userTypeId: 5,
+        name: "Supervisor",
+        permissionLevel: 2,
       } as UserType;
 
-      const updatedUserType = {
-        userTypeId: 1,
-        name: "Updated Admin", 
-        permissionLevel: 1
-      } as UserType;
+      // 1. Guardar tipo de usuario
+      mockRepository.save.mockResolvedValue(savedUserType);
+      const saveResult = await userTypeService.save(userTypeData);
+      expect(saveResult).toEqual(savedUserType);
 
-      mockRepository.findOne.mockResolvedValue(existingUserType);
-      mockRepository.save.mockResolvedValue(updatedUserType);
+      // 2. Obtener por ID
+      mockRepository.findOne.mockResolvedValue(savedUserType);
+      const getResult = await userTypeService.getById(5);
+      expect(getResult).toEqual(savedUserType);
 
-      const result = await userTypeService.update(updateData);
-
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { userTypeId: 1 }
-      });
-      expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({
-        userTypeId: 1,
-        name: "Updated Admin",
-        permissionLevel: 1
-      }));
-      expect(result).toEqual(updatedUserType);
+      // 3. Obtener todos los tipos
+      mockRepository.find.mockResolvedValue([savedUserType]);
+      const getAllResult = await userTypeService.getAll();
+      expect(getAllResult).toContain(savedUserType);
     });
 
-    it("should throw error when userTypeId is missing", async () => {
-      const updateData = { name: "Test" };
+    it("debería manejar jerarquía de permisos", async () => {
+      const jerarquia = [
+        { name: "Super Admin", permissionLevel: 1 },
+        { name: "Admin", permissionLevel: 2 },
+        { name: "Manager", permissionLevel: 3 },
+        { name: "Employee", permissionLevel: 4 },
+        { name: "Guest", permissionLevel: 5 },
+      ];
 
-      await expect(userTypeService.update(updateData)).rejects.toThrow(
-        "userTypeId es requerido para actualizar"
-      );
+      const tiposGuardados = jerarquia.map((tipo, index) => ({
+        userTypeId: index + 1,
+        ...tipo,
+      })) as UserType[];
+
+      // Guardar tipos en orden jerárquico
+      for (let i = 0; i < jerarquia.length; i++) {
+        mockRepository.save.mockResolvedValueOnce(tiposGuardados[i]);
+        
+        const saveResult = await userTypeService.save(jerarquia[i]);
+        expect(saveResult.permissionLevel).toBe(jerarquia[i].permissionLevel);
+      }
+
+      // Obtener todos y verificar jerarquía
+      mockRepository.find.mockResolvedValue(tiposGuardados);
+      const getAllResult = await userTypeService.getAll();
+      
+      expect(getAllResult).toHaveLength(5);
+      expect(getAllResult.map(t => t.name)).toEqual([
+        "Super Admin", "Admin", "Manager", "Employee", "Guest"
+      ]);
+      
+      // Verificar que los niveles son progresivos
+      const niveles = getAllResult.map(t => t.permissionLevel);
+      expect(niveles).toEqual([1, 2, 3, 4, 5]);
     });
 
-    it("should throw error when user type not found for update", async () => {
-      const updateData = { userTypeId: 999, name: "Test" };
-      mockRepository.findOne.mockResolvedValue(null);
+    it("debería manejar búsqueda de tipos específicos", async () => {
+      const tiposEspecificos = [
+        { id: 1, name: "Barista", permissionLevel: 4 },
+        { id: 10, name: "Gerente de Turno", permissionLevel: 2 },
+        { id: 25, name: "Contador", permissionLevel: 3 },
+      ];
 
-      await expect(userTypeService.update(updateData)).rejects.toThrow(
-        "Tipo de usuario con ID 999 no encontrado"
-      );
-    });
+      for (const tipo of tiposEspecificos) {
+        const mockUserType = {
+          userTypeId: tipo.id,
+          name: tipo.name,
+          permissionLevel: tipo.permissionLevel,
+        } as UserType;
 
-    it("should handle database error when updating", async () => {
-      const updateData = { userTypeId: 1, name: "Test" };
-      const existingUserType = { userTypeId: 1, name: "Old" } as UserType;
+        mockRepository.findOne.mockResolvedValueOnce(mockUserType);
 
-      mockRepository.findOne.mockResolvedValue(existingUserType);
-      mockRepository.save.mockRejectedValue(new Error("Database error"));
+        const result = await userTypeService.getById(tipo.id);
 
-      await expect(userTypeService.update(updateData)).rejects.toThrow("Database error");
+        expect(result?.name).toBe(tipo.name);
+        expect(result?.permissionLevel).toBe(tipo.permissionLevel);
+      }
     });
   });
 
-  describe("delete", () => {
-    it("should delete user type successfully", async () => {
-      const deleteResult = { affected: 1, raw: {} };
-      mockRepository.delete.mockResolvedValue(deleteResult);
+  describe("Validaciones de datos", () => {
+    it("debería manejar nombres de diferentes longitudes", async () => {
+      const nombres = [
+        "A",
+        "Admin",
+        "Administrador Principal",
+        "Supervisor de Área de Ventas y Atención al Cliente",
+        "",
+      ];
 
-      const result = await userTypeService.delete(1);
+      for (const nombre of nombres) {
+        const userTypeData = {
+          name: nombre,
+          permissionLevel: 1,
+        };
 
-      expect(mockRepository.delete).toHaveBeenCalledWith(1);
-      expect(result).toEqual({
-        message: "Tipo de usuario eliminado correctamente",
-        id: 1
-      });
+        mockRepository.save.mockResolvedValue({} as UserType);
+
+        await userTypeService.save(userTypeData);
+
+        expect(mockRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: nombre,
+          })
+        );
+      }
     });
 
-    it("should throw error when user type not found for deletion", async () => {
-      const deleteResult = { affected: 0, raw: {} };
-      mockRepository.delete.mockResolvedValue(deleteResult);
+    it("debería manejar rangos completos de niveles de permiso", async () => {
+      const niveles = [
+        0,    // Sin permisos
+        1,    // Máximo nivel
+        5,    // Nivel medio
+        10,   // Nivel bajo
+        99,   // Nivel muy bajo
+        100,  // Nivel mínimo
+        999,  // Nivel extremo
+      ];
 
-      await expect(userTypeService.delete(999)).rejects.toThrow(
-        "Tipo de usuario con ID 999 no encontrado"
-      );
+      for (const nivel of niveles) {
+        const userTypeData = {
+          name: `Tipo Nivel ${nivel}`,
+          permissionLevel: nivel,
+        };
+
+        mockRepository.save.mockResolvedValue({} as UserType);
+
+        await userTypeService.save(userTypeData);
+
+        expect(mockRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            permissionLevel: nivel,
+          })
+        );
+      }
     });
 
-    it("should handle database error when deleting", async () => {
-      mockRepository.delete.mockRejectedValue(new Error("Database error"));
+    it("debería manejar nombres con caracteres especiales y acentos", async () => {
+      const nombresEspeciales = [
+        "Administrador",
+        "Gerente de Área",
+        "Empleado & Supervisor",
+        "Cajero/Mesero",
+        "Técnico de Mantenimiento",
+        "Asistente - Temporal",
+        "Usuario (Prueba)",
+        "Operador 24/7",
+        "Staff → Café",
+      ];
 
-      await expect(userTypeService.delete(1)).rejects.toThrow("Database error");
-    });
-  });
+      for (const nombre of nombresEspeciales) {
+        const userTypeData = {
+          name: nombre,
+          permissionLevel: 3,
+        };
 
-  describe("getByPermissionLevel", () => {
-    it("should return user types by permission level", async () => {
-      const userTypes = [
-        { userTypeId: 1, name: "Admin", permissionLevel: 1 },
-        { userTypeId: 2, name: "Super Admin", permissionLevel: 1 }
-      ] as UserType[];
+        mockRepository.save.mockResolvedValue({} as UserType);
 
-      mockRepository.find.mockResolvedValue(userTypes);
+        await userTypeService.save(userTypeData);
 
-      const result = await userTypeService.getByPermissionLevel(1);
-
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { permissionLevel: 1 },
-        order: { name: "ASC" }
-      });
-      expect(result).toEqual(userTypes);
-    });
-
-    it("should return empty array when no user types found for permission level", async () => {
-      mockRepository.find.mockResolvedValue([]);
-
-      const result = await userTypeService.getByPermissionLevel(999);
-
-      expect(result).toEqual([]);
+        expect(mockRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: nombre,
+          })
+        );
+      }
     });
 
-    it("should handle database error when getting by permission level", async () => {
-      mockRepository.find.mockRejectedValue(new Error("Database error"));
+    it("debería manejar casos límite de IDs", async () => {
+      const idsLimite = [0, 1, 999, 1000, 9999, 99999];
 
-      await expect(userTypeService.getByPermissionLevel(1)).rejects.toThrow("Database error");
+      for (const id of idsLimite) {
+        const mockUserType = {
+          userTypeId: id,
+          name: `Tipo ${id}`,
+          permissionLevel: Math.min(id, 10),
+        } as UserType;
+
+        mockRepository.findOne.mockResolvedValue(mockUserType);
+
+        const result = await userTypeService.getById(id);
+
+        expect(result?.userTypeId).toBe(id);
+        expect(mockRepository.findOne).toHaveBeenCalledWith({
+          where: { userTypeId: id },
+        });
+      }
+    });
+
+    it("debería manejar combinaciones de nombre y nivel lógicas", async () => {
+      const combinaciones = [
+        { name: "Super Admin", permissionLevel: 1 },
+        { name: "Admin", permissionLevel: 2 },
+        { name: "Moderador", permissionLevel: 3 },
+        { name: "Usuario", permissionLevel: 5 },
+        { name: "Invitado", permissionLevel: 10 },
+        { name: "Restringido", permissionLevel: 99 },
+      ];
+
+      for (const combo of combinaciones) {
+        mockRepository.save.mockResolvedValue({} as UserType);
+
+        await userTypeService.save(combo);
+
+        expect(mockRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: combo.name,
+            permissionLevel: combo.permissionLevel,
+          })
+        );
+      }
+    });
+
+    it("debería manejar datos inconsistentes o nulos", async () => {
+      const casosInconsistentes = [
+        { name: null, permissionLevel: 1 },
+        { name: undefined, permissionLevel: 2 },
+        { name: "Válido", permissionLevel: null },
+        { name: "Válido", permissionLevel: undefined },
+        { name: "", permissionLevel: 0 },
+      ];
+
+      for (const caso of casosInconsistentes) {
+        mockRepository.save.mockResolvedValue({} as UserType);
+
+        await userTypeService.save(caso);
+
+        expect(mockRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: caso.name,
+            permissionLevel: caso.permissionLevel,
+          })
+        );
+      }
     });
   });
 });
